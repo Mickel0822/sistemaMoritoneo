@@ -48,26 +48,46 @@ const Lectura: React.FC<LecturaProps> = ({ documentKey, onVolver }) => {
 
   // Cargar modelos y solicitar webcam
   useEffect(() => {
+    let mounted = true;
+
     const loadModels = async () => {
-      await faceapi.nets.tinyFaceDetector.loadFromUri('/models/tiny_face_detector');
-      await faceapi.nets.faceLandmark68Net.loadFromUri('/models/face_landmark_68');
-      startVideo();
+      // Asegúrate de tener los modelos en: frontend/public/models/
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
+        faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+      ]);
+      if (mounted) await startVideo();
     };
 
-    const startVideo = () => {
-      navigator.mediaDevices.getUserMedia({
-        video: { width: VIDEO_WIDTH, height: VIDEO_HEIGHT }
-      })
-        .then((stream) => {
-          if (videoRef.current) videoRef.current.srcObject = stream;
-        })
-        .catch((err) => console.error('Error con webcam:', err));
+    const startVideo = async () => {
+      if (typeof window === 'undefined') return;
+
+      const isLocalhost = /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+      if (!(window.isSecureContext || isLocalhost)) {
+        console.error('getUserMedia requiere HTTPS o localhost');
+        alert('Para usar la cámara, abre la app en https://... o en http://localhost:3000');
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: VIDEO_WIDTH, height: VIDEO_HEIGHT }
+        });
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play().catch(() => {});
+        }
+      } catch (err) {
+        console.error('Error con webcam:', err);
+        alert('No se pudo acceder a la cámara. Revisa permisos del navegador y que no esté en uso por otra app.');
+      }
     };
 
     loadModels();
 
     // Cleanup: Detener la cámara al desmontar el componente
     return () => {
+      mounted = false;
       stopCamera();
     };
   }, []);
@@ -122,7 +142,7 @@ const Lectura: React.FC<LecturaProps> = ({ documentKey, onVolver }) => {
       }
     };
 
-    interval = setInterval(processFrame, 200); // 5 fps aprox.
+    interval = setInterval(processFrame, 200); // ~5 fps
 
     return () => clearInterval(interval);
   }, [monitoring]);
@@ -160,8 +180,8 @@ const Lectura: React.FC<LecturaProps> = ({ documentKey, onVolver }) => {
     ];
     const mejor = valores.reduce((a, b) => (a.valor > b.valor ? a : b)).nombre;
 
-    // Enviar resultados al backend Django
-    fetch('http://localhost:8000/api/resultados/', {
+    // Enviar resultados al backend Django (ruta relativa para Render + rewrite)
+    fetch('/api/resultados/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -169,7 +189,7 @@ const Lectura: React.FC<LecturaProps> = ({ documentKey, onVolver }) => {
         ear: earPct,
         headPose: headPosePct,
         mor: morPct,
-        mejor: mejor
+        mejor
       })
     })
       .then(res => res.json())
