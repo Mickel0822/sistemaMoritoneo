@@ -95,7 +95,6 @@ const Lectura: React.FC<LecturaProps> = ({ documentKey, onVolver }) => {
   // Procesar frames de la webcam y calcular métricas
   useEffect(() => {
     if (!monitoring) return;
-    let interval: NodeJS.Timeout;
 
     const processFrame = async () => {
       if (!videoRef.current || !canvasRef.current) return;
@@ -142,8 +141,7 @@ const Lectura: React.FC<LecturaProps> = ({ documentKey, onVolver }) => {
       }
     };
 
-    interval = setInterval(processFrame, 200); // ~5 fps
-
+    const interval: ReturnType<typeof setInterval> = setInterval(processFrame, 200); // ~5 fps
     return () => clearInterval(interval);
   }, [monitoring]);
 
