@@ -1,0 +1,7 @@
+# Node.js
+node_modules/
+.next/
+# Python (si usas Django)
+__pycache__/
+*.pyc
+venv/
