@@ -53,8 +53,8 @@ const Lectura: React.FC<LecturaProps> = ({ documentKey, onVolver }) => {
     const loadModels = async () => {
       // Asegúrate de tener los modelos en: frontend/public/models/
       await Promise.all([
-        faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
-        faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+        faceapi.nets.tinyFaceDetector.loadFromUri('/models/tiny_face_detector'),
+        faceapi.nets.faceLandmark68Net.loadFromUri('/models/face_landmark_68'),
       ]);
       if (mounted) await startVideo();
     };
